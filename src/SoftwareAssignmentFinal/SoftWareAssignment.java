@@ -2,12 +2,12 @@ package SoftwareAssignmentFinal;
 
 import javax.swing.*;
 import java.awt.*;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.util.ArrayList;
+import java.util.Random;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 class User{
     public String Id;
@@ -128,47 +128,69 @@ class JoinWindow extends JFrame {
         return joinButton;
     }
 }
-class gameStart extends JFrame {
-    public gameStart() {
+class gameStartWindow extends JFrame {
+    public gameStartWindow() {
         setTitle("게임 시작");
-        setLocation(400, 400);
-        setLayout(new GridLayout(3, 1));
+        setLocation(400, 300);
 
-        JPanel windowGameStart = new JPanel(); // 전체 컴포넌트 -> 좀 더 키워야함(눈에 잘 보일려면)
-        windowGameStart.add(new JLabel("숫자 야구 게임"));
+        JPanel gameStartPanel = new JPanel(new GridLayout(2, 1));
+        gameStartPanel.setPreferredSize(new Dimension(400,400));
 
-        JButton start = createStartButton();
-        JButton gameCancel = new JButton("나가기"); // 나가기 버튼 컴포넌트(이것도 좀 키워야함)
-        gameCancel.addActionListener(e -> dispose());
+        JPanel windowGameTitlePanel = new JPanel(new BorderLayout());
 
-        add(windowGameStart);
-        add(start);
-        add(gameCancel);
+        JLabel titleLabel = new JLabel("숫자 야구 게임");
+        Font titleFont = titleLabel.getFont();
+        titleLabel.setFont(new Font(titleFont.getName(), Font.PLAIN, 24)); // 글꼴 크기 조정
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
+        windowGameTitlePanel.add(titleLabel, BorderLayout.CENTER);
+
+        JPanel windowGameButtonPanel = new JPanel(new BorderLayout());
+        JButton startButton = createStartButton();
+        startButton.setPreferredSize(new Dimension(200,100));
+
+        JButton gameCancelButton = new JButton("나가기");
+        gameCancelButton.addActionListener(e -> dispose());
+        gameCancelButton.setPreferredSize(new Dimension(200,100));
+
+        windowGameButtonPanel.add(startButton, BorderLayout.NORTH);
+        windowGameButtonPanel.add(gameCancelButton, BorderLayout.SOUTH);
+
+        gameStartPanel.add(windowGameTitlePanel);
+        gameStartPanel.add(windowGameButtonPanel);
+
+        add(gameStartPanel);
         pack();
         setVisible(true);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
     private JButton createStartButton() {
-        JButton startButton = new JButton("게임 시작"); // 게임 시작 버튼 컴포넌트(이것도 좀 키워야함)
+        JButton startButton = new JButton("게임 시작");
         startButton.addActionListener(e -> {
             new gameWindows();
             dispose();
         });
         return startButton;
     }
-
     private static class gameWindows extends JFrame {
+
+        //게임을 위한 4자리 랜덤
+        Random random = new Random();
+
         //전체 패널 구성 -> 왼쪽 패널(입력 창, 키 패드, OK버튼), 오른쪽 패널(사용자 ID, 텍스트 창), 아래 패드(종료)
         private final JTextField txt;
         private final JTextArea resultTextArea;
+        private int okButtonClick = 0;
+        private final JLabel gameCount;
+        //0 ~ 9999번까지
+        private final String baseBallGame = String.format("%04d", random.nextInt(1000));
 
         public gameWindows() {
+
             // 전체 패널
             JPanel allPanel = new JPanel();
             allPanel.setLayout(new BorderLayout());
-            //ALLPANEL.setLayout(new GridLayout(2, 1));
 
             // 왼쪽 패널 (키패드, 입력, OK 버튼)
             JPanel leftPanel = new JPanel();
@@ -206,7 +228,15 @@ class gameStart extends JFrame {
             JPanel okPanel = new JPanel();
             JButton okButton = new JButton("OK");
             okButton.setPreferredSize(new Dimension(300,30));
-            okButton.addActionListener(e -> displayResult());
+            okButton.addActionListener(e -> {
+                if(txt.getText().length() < 5)
+                {
+                    okButtonClick++;
+                }
+                displayOkButtonClickCount();
+                displayResult();
+                txt.setText("");
+            });
             okPanel.add(okButton,BorderLayout.SOUTH);
 
             leftPanel.add(keyPanel,BorderLayout.CENTER);
@@ -221,16 +251,22 @@ class gameStart extends JFrame {
             textPanel.setLayout(new BorderLayout());
             resultTextArea = new JTextArea(3, 15);
             resultTextArea.setEditable(false);
+
+            resultTextArea.append(baseBallGame + "\n"); //잠깐 출력해 놓은 것------>나중에 삭제
             textPanel.add(new JScrollPane(resultTextArea), BorderLayout.CENTER);
+
+            gameCount = new JLabel("시도 횟수 : " + okButtonClick);
 
             rightPanel.add(userIdLabel,BorderLayout.NORTH);
             rightPanel.add(textPanel, BorderLayout.CENTER);
+            rightPanel.add(gameCount,BorderLayout.SOUTH);
 
             // 아래 패널 (종료 버튼)
             JPanel exitPanel = new JPanel(new FlowLayout(FlowLayout.CENTER)); // FlowLayout으로 변경
             JButton exitButton = new JButton("종료");
             exitButton.setPreferredSize(new Dimension(500, 40)); // 버튼 크기 조절
             exitButton.addActionListener(e -> dispose());
+            //게임을 포기했을 때 출력됨
             exitPanel.add(exitButton);
 
 
@@ -247,11 +283,45 @@ class gameStart extends JFrame {
             setVisible(true);
         }
 
+        private void displayOkButtonClickCount(){
+            gameCount.setText("시도 횟수 : " + okButtonClick);
+        }
         private void displayResult() {
             // 입력된 값을 가져와서 텍스트 창에 표시하는 로직 구현
+            gameLogic();
+        }
+
+        private void gameLogic() {
+            //game logic
             String inputValue = txt.getText();
-            resultTextArea.append(inputValue + "\n");
-            // 추가로 할 일이 있다면 여기에 구현
+            if(inputValue.length() > 4) {
+                JOptionPane.showMessageDialog(null,"숫자를 4개만 입력해주세요","숫자 초과",JOptionPane.ERROR_MESSAGE);
+            }
+            else{
+                int strike, ball;
+                strike = 0;
+                ball = 0;
+                for (int i = 0; i < inputValue.length(); i++) {
+                    char current = inputValue.charAt(i);
+                    char target = baseBallGame.charAt(i);
+
+                    if (current == target) {
+                        strike++;
+                    } else {
+                        for (int j = 0; j < inputValue.length(); j++){
+                            char temp_current = inputValue.charAt(j);
+                            if (target == temp_current){
+                                ball++;
+                            }
+                        }
+                    }
+                }
+                resultTextArea.append(inputValue + " " + strike + "S" + ball + "B\n");
+                if (strike == 4) {
+                    JOptionPane.showMessageDialog(null, "시도 횟수 :" + okButtonClick  + "\n축하합니다!!", "게임 완료", JOptionPane.INFORMATION_MESSAGE);
+                    dispose();
+                }
+            }
         }
     }
 }
@@ -290,7 +360,7 @@ class loginWindow extends JFrame {
                 JOptionPane.showMessageDialog(null, "부정확한 암호", "로그인 정보", JOptionPane.ERROR_MESSAGE);
             else {
                 JOptionPane.showMessageDialog(null, "로그인 완료", "로그인 정보", JOptionPane.INFORMATION_MESSAGE);
-                new gameStart();
+                new gameStartWindow();
                 //게임 패드(숫자 맞추기)
                 dispose();
             }
@@ -317,7 +387,20 @@ class SoftWareAssignment{
         User u;
         UserList ul = new UserList();
         loginWindow lw = new loginWindow();
-        Scanner sc = new Scanner(new File("data.txt"));
+
+        File file = new File("data.txt");
+        try {
+            if (file.createNewFile()) {
+                System.out.println("파일이 생성되었습니다.");
+            } else {
+                System.out.println("파일이 이미 존재합니다.");
+            }
+        } catch (IOException e) {
+            Logger logger = Logger.getLogger(SoftWareAssignment.class.getName());
+            logger.log(Level.SEVERE, "파일 생성 중 오류가 발생했습니다", e);
+        }
+        Scanner sc = new Scanner(file);
+
         while (sc.hasNext()) {
             String id = sc.next();
             String pass = sc.next();
@@ -331,7 +414,7 @@ class SoftWareAssignment{
 
 //할일
 //파일이 없을 떄 자동 생성하도록 하기
-//야구 게임 구현하기
+//야구 게임 구현하기 -clear
 //야구 게임 환경 구현하기 - clear
 //로그인 - clear
 //회원 가입 - clear
